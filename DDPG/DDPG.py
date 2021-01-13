@@ -61,6 +61,8 @@ class Actor(object):
         self.lr = learning_rate
         self.replacement = replacement
         self.t_replace_counter = 0
+        self.restore_network = False,
+        self.save_network = True,
         # Actor模块
         with tf.variable_scope('Actor'):
             # input s, output a
@@ -112,7 +114,7 @@ class Actor(object):
                 # scaled_a = tf.multiply(actions, self.action_bound1, name='scaled_a')  # Scale output to -action_bound to action_bound
                 # scaled_a = tf.multiply(actions, self.action_bound2, name='scaled_a')
                 # scaled_a = tf.multiply(actions, self.action_bound2, name='scaled_a')
-        return actions + 2
+        return (actions + 1)/2
 
     # 学习更新网络
     def learn(self, s):   # batch update
@@ -153,6 +155,20 @@ class Actor(object):
             # 通过求得的policy_grads对e_params参数更新
             self.train_op = opt.apply_gradients(zip(self.policy_grads, self.e_params))
 
+    def save_net(self):
+        if self.save_network:
+            saver = tf.train.Saver()
+            save_path = saver.save(self.sess, "my_net/actor_save_net_20.ckpt")
+            print("Save to path:", save_path)
+            # print(self.cost_his)
+            return save_path
+
+    def restore_net(self):
+        if self.restore_network:
+            saver = tf.train.Saver()
+            saver.restore(self.sess, "my_net/actor_save_net_20.ckpt")
+            print("restore in path")
+
 
 ###############################  Critic  ####################################
 
@@ -169,6 +185,8 @@ class Critic(object):
         # 未来回报衰减率
         self.gamma = gamma
         self.replacement = replacement
+        self.restore_network = False,
+        self.save_network = True,
 
         # Critic模块定义，包含eval_net, target_net
         with tf.variable_scope('Critic'):
@@ -236,6 +254,20 @@ class Critic(object):
                 self.sess.run(self.hard_replacement)
             self.t_replace_counter += 1
 
+    def save_net(self):
+        if self.save_network:
+            saver = tf.train.Saver()
+            save_path = saver.save(self.sess, "my_net/critic_save_net_20.ckpt")
+            print("Save to path:", save_path)
+            # print(self.cost_his)
+            return save_path
+
+    def restore_net(self):
+        if self.restore_network:
+            saver = tf.train.Saver()
+            saver.restore(self.sess, "my_net/critic_save_net_20.ckpt")
+            print("restore in path")
+
 
 #####################  Memory  ####################
 
@@ -250,6 +282,12 @@ class Memory(object):
 
     def store_transition(self, s, a, r, s_):
         # 按照（s, a, r, s_）的方式存储记忆，注意要以array的格式存储
+        '''
+        print(s)
+        print(a)
+        print(r)
+        print(s_)
+        '''
         transition = np.hstack((s, [a], [[r]], s_))
         # 记忆库的覆盖
         index = self.pointer % self.capacity  # replace the old memory with new memory
@@ -297,7 +335,8 @@ critic = Critic(sess, state_dim, action_dim, LR_C, GAMMA, REPLACEMENT, actor.a, 
 actor.add_grad_to_graph(critic.a_grads)
 # 激活全部变量
 sess.run(tf.global_variables_initializer())
-
+# critic.restore_net()
+# actor.restore_net()
 M = Memory(MEMORY_CAPACITY, dims=2 * state_dim + action_dim + 1)
 
 if OUTPUT_GRAPH:
@@ -321,8 +360,8 @@ for i in range(MAX_EPISODES):
             # 同时，np.clip截取（0，2）的部分，小于0的数全变为0，大于2的数全变为2
 
             dim = np.int(action_dim/2)
-            a[:dim] = np.clip(np.random.normal(a[:dim], var), 0, action_bound1)    # add randomness to action selection for exploration
-            a[dim:] = np.clip(np.random.normal(a[dim:], var), 0, action_bound2)
+            a[:dim] = np.clip(np.random.normal(a[:dim]*action_bound1, var), 0, action_bound1)    # add randomness to action selection for exploration
+            a[dim:] = np.clip(np.random.normal(a[dim:]*action_bound2, var), 0, action_bound2)
             a = a.astype(int)
             print('a', a)
             s_, r, done = env.step(a)
@@ -332,7 +371,7 @@ for i in range(MAX_EPISODES):
 
             if M.pointer > MEMORY_CAPACITY:
                 # 当记忆库已满时，不断减小方差
-                var *= .999999    # decay the action randomness
+                var *= .99999999    # decay the action randomness
                 # b_M为记忆库中提取的记忆
                 b_M = M.sample(BATCH_SIZE)
                 # 截取当前状态部分
@@ -350,13 +389,7 @@ for i in range(MAX_EPISODES):
             ep_reward += r
             if done:
                 break
-            '''
-            if j == MAX_EP_STEPS-1:
-                print('Episode:', i, ' Reward: %i' % int(ep_reward), 'Explore: %.2f' % var, )
-                if ep_reward > -300:
-                    # 累计回报大于-300时，当前本回合游戏结束
-                    RENDER = True
-                break
-            '''
 
 print('Running time: ', time.time()-t1)
+actor.save_net()
+critic.save_net()

@@ -10,9 +10,9 @@ import math
 
 
 eta = 0.5  # 时延和能耗的比重
-K = 3   # 总任务个数
-Sat_N = 2    # 定义总卫星个数
-Gat_N = 2    # 定义总网关个数
+K = 20   # 总任务个数
+Sat_N = 4    # 定义总卫星个数
+Gat_N = 3    # 定义总网关个数
 Ter_N = 3    # 定义地面IoT终端的个数
 N_k = [8*10**4, 1.2*10**5]   # 定义任务大小区间
 w_k = 1   # 每个任务所占的比重
@@ -25,7 +25,7 @@ Y_g = 50*10**6  # 单个网关的总通信容量
 Z_s = 10**10   # 单个卫星的总计算容量，单位cycles/s
 Q_g = 50*10**10  # 单个网关的总计算容量，单位cycles/s
 J = 20   # 最大完成回报
-Time_slot = 10**-2  # 每个时隙长度
+Time_slot = 10**-1  # 每个时隙长度
 c_v = 3*10**8  # 光速
 Max_time_slot = 100   # 定义一个最大处理时间的时隙个数
 
@@ -138,7 +138,7 @@ class Sat_IoT(object):
         if (np.min(Max_time_slot*Time_slot*self.X_remain - self.X_allocation**2) < 0) | \
                 (np.min(Max_time_slot*Time_slot*self.Z_remain/cycles_average_bit - self.Z_allocation**2) < 0) | \
                 (np.min(Max_time_slot*Time_slot*self.Y_remain - self.Gat_allocation**2) < 0) | \
-                (np.min(Max_time_slot*Time_slot*self.Q_remain/cycles_average_bit - self.X_allocation**2) < 0):
+                (np.min(Max_time_slot*Time_slot*self.Q_remain/cycles_average_bit - self.Gat_allocation**2) < 0):
             return 1
         else:
             return 0
@@ -245,10 +245,9 @@ class Sat_IoT(object):
                         # 相除单位为bits/s,同时系统在完成终端到卫星之间的传输任务之后，立即执行下一步操作
                         if self.Z[i][j] > 0:
                             self.psi_c[i][j] -= self.Z[i][j] / cycles_average_bit * Time_slot
-                        if self.Y[i][j] > 0:
-                            for m in range(Gat_N):
-                                if self.phi_t[i][m] != 0:
-                                    self.phi_t[i][m] -= self.Y[i][m] * Time_slot
+                        for m in range(Gat_N):
+                            if (self.Y[i][m] > 0) & (self.phi_t[i][m] != 0):
+                                self.phi_t[i][m] -= self.Y[i][m] * Time_slot
                     else:
                         self.psi_c[i][j] -= self.Z[i][j] / cycles_average_bit * \
                             (-self.omega_t[i][j]/self.X[i][j])
@@ -306,7 +305,7 @@ class Sat_IoT(object):
             print("计算卸载不存在的任务，初始状态不更新")
             # self.update()
             # self.show_system()
-            return self.state.reshape(1, self.n_features), -10, False
+            return self.state.reshape(1, self.n_features), -100, False
 
         # print(self.Gat_allocation)
         # 更新X,Y,Z,Q,U,psi,phi

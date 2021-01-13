@@ -168,8 +168,8 @@ class DeepQNetwork:
             # forward feed the observation and get q value for every actions
             actions_value = self.sess.run(self.q_eval, feed_dict={self.s: observation})
             # numpy.argmax(array, axis) 用于返回一个numpy数组中最大值的索引值
-            print('action_value:', actions_value)
-            print('epsilon', self.epsilon)
+            # print('action_value:', actions_value)
+            # print('epsilon', self.epsilon)
             action = np.argmax(actions_value)
         else:
             action = np.random.randint(0, self.n_actions)
@@ -249,7 +249,7 @@ class DeepQNetwork:
         # print('loss', self.loss)
         # print('cost', self.cost)
         # append(object) 是将一个对象作为一个整体添加到列表中，添加后的列表比原列表多一个元素
-        self.cost_his.append(self.cost/100)
+        self.cost_his.append(self.cost/10**6)
 
 
         # increasing epsilon

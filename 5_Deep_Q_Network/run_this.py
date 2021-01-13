@@ -1,10 +1,10 @@
-from Sat_IoT_env import Sat_IoT
+from Sat_IoT_env_optimization import Sat_IoT
 from RL_brain import DeepQNetwork
 
 
 def run_maze():
     step = 0
-    for episode in range(1000000):
+    for episode in range(10000):
         # initial observation
         observation = env.reset()
         observation /= 10 ** 6
@@ -54,7 +54,7 @@ if __name__ == "__main__":
                       memory_size=2000,     # 记忆上限
                       output_graph=True,   # 输出神经网络训练模型
                       restore_network=False,
-                      save_network=False
+                      save_network=True
                       )
     RL.restore_net()
     run_maze()

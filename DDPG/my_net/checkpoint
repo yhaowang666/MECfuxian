@@ -1,0 +1,2 @@
+model_checkpoint_path: "actor_save_net_20.ckpt"
+all_model_checkpoint_paths: "actor_save_net_20.ckpt"
